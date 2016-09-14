@@ -7,6 +7,7 @@
 #ifndef PSTR
  #define PSTR // Make Arduino Due happy
 #endif
+#include <Timer.h>
 
 #define MATRIX_PIN 6
 #define SONAR_PIN 5
@@ -31,61 +32,62 @@ int rx,ry,rr,rg,rb;
 int8_t arraysize = 9;
 uint16_t rangevalue[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0};
 uint16_t sorted_rangevalue[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0};
-State current_state=LONG_RANGE_SCAN;
-boolean detect=false;
-uint16_t ModE;  //median range in inches
-int16_t pulse;  // number of pulses from sensor 
-  
+State current_state;
+boolean detect;
+uint16_t range;
+Timer t;
+int scan_event;
+
 void setup() {
   Serial.begin(9600);
+  Serial.println("Setting up...");
   pinMode(SONAR_PIN,INPUT);
   pinMode(SPEAKER_PIN,OUTPUT);
   matrix.begin();
   matrix.setBrightness(10);
   matrix.fillScreen(0);
+  matrix.show();
   delay(500); //allow sonar to calibrate and get first reading
   //fill the range array with the first nine values
-  for (int i=0;i<arraysize;++i){
-    pulse = pulseIn(SONAR_PIN, HIGH);  
-    pulse/= 147;  //convert to inches
-    if (pulse>=10) { //we won't change the view if we read too low or too high
-        rangevalue[i]=pulse;
-      }
-
+  for (int i=0;i<arraysize;i++) {
+    getRange();
   }
+  startLongRangeScan();
 }
 
 void loop() {
+  switch (current_state) {
+    case LONG_RANGE_SCAN:
+        if (detect) {
+          Serial.print("Range: ");Serial.println(range);
+          detect=false;
+        }
+      break;
+    
+    case SHORT_RANGE_SCAN:
+      break;
 
+    case AWESOME_DETECTED:
+      break;
 
-  int lit_rows;   // how many rows of the view we'll light up                   
+    case CLEAR:
+      break;
+  }
 
-  matrix.fillScreen(0);
-
-  
-  pulse = pulseIn(SONAR_PIN, HIGH);  // read in time for pin to transition
-  pulse/= 147;         // pulses to inches 
-
-  //determine number of rows based on distance
-  if (pulse>=10) { //we won't change the view if we read too low or too high
-    for (int i=0;i<arraysize-1;++i) { //move all existing array entries down one
-      rangevalue[i]=rangevalue[i+1];
-    }
-    rangevalue[arraysize-1]=pulse;
-    for (int i=0;i<arraysize;++i) {
-      sorted_rangevalue[i]=rangevalue[i];
-    }
-    isort(sorted_rangevalue,arraysize);        // sort samples
-    ModE = mode(sorted_rangevalue,arraysize);  // get median value 
-    lit_rows=9-(ModE/10);
-    Serial.print(pulse);Serial.print(" ");Serial.print(ModE);Serial.print(" ");Serial.println(lit_rows);
+  t.update();
+/*
+  int lit_rows;   // how many rows of the view we'll light up  
+                  
+    matrix.fillScreen(0);
+    lit_rows=9-(modE/10);
+    Serial.print(pulse);Serial.print(" ");Serial.print(modE);Serial.print(" ");Serial.println(lit_rows);
     for (int i=lit_rows-1;i>=0;--i) {
       lightRow(i);
     }
     matrix.show();
-  }
-  delay(60); // wait between samples
 
+  delay(60); // wait between samples
+*/
 
 /*
   playTone(125,150);
@@ -97,21 +99,35 @@ void loop() {
 */
 }
 
-
-void lightRow(int row) {
-  for (int i=0; i<w; ++i) {
-    matrix.drawPixel(i,row,matrix.Color(255, 0, 0));   
-  }
+void startLongRangeScan() {
+  Serial.println("Switching to long range scanner...");
+  t.stop(scan_event);
+  current_state=LONG_RANGE_SCAN;
+  scan_event=t.every(1000,getRange);
+  detect=false;
 }
 
-void playTone(int tone, int duration) {
-  for (long i = 0; i < duration * 1000L; i += tone * 2) {
-    digitalWrite(SPEAKER_PIN, HIGH);
-    delayMicroseconds(tone);
-    digitalWrite(SPEAKER_PIN, LOW);
-    delayMicroseconds(tone);
-  }
+void getRange() {
+  int pulse;
+  
+    pulse=pulseIn(SONAR_PIN, HIGH);
+    Serial.print(pulse);Serial.print(" ");Serial.println(pulse/147);
+    pulse/=147;
+    if (pulse>=10) { //we won't change the view if we read too low or too high
+      for (int i=0;i<arraysize-1;++i) { //move all existing array entries down one
+        rangevalue[i]=rangevalue[i+1];
+      }
+      rangevalue[arraysize-1]=pulse;
+      for (int i=0;i<arraysize;++i) {
+        sorted_rangevalue[i]=rangevalue[i];
+      }
+      isort(rangevalue,arraysize);        // sort samples
+      range = mode(rangevalue,arraysize);  // get median value and convert to inches 
+    } 
+    detect=true;
 }
+
+
 
 // Sorting function (Author: Bill Gentles, Nov. 12, 2010)
 void isort(uint16_t *a, int8_t n){
@@ -155,5 +171,20 @@ uint16_t mode(uint16_t *x,int n){
       mode=x[(n/2)];
     }
     return mode;
+  }
+}
+
+void lightRow(int row) {
+  for (int i=0; i<w; ++i) {
+    matrix.drawPixel(i,row,matrix.Color(255, 0, 0));   
+  }
+}
+
+void playTone(int tone, int duration) {
+  for (long i = 0; i < duration * 1000L; i += tone * 2) {
+    digitalWrite(SPEAKER_PIN, HIGH);
+    delayMicroseconds(tone);
+    digitalWrite(SPEAKER_PIN, LOW);
+    delayMicroseconds(tone);
   }
 }
