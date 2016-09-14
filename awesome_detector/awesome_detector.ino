@@ -13,9 +13,8 @@
 #define SONAR_PIN 5
 #define SPEAKER_PIN 10
 #define LRS_TRANSITION 10
-#define SRS_TRANSITION 5
+#define SRS_TRANSITION 10
 #define AD_TRANSITION 15
-
 
 enum State {
   LONG_RANGE_SCAN,
@@ -30,31 +29,38 @@ Adafruit_NeoMatrix matrix = Adafruit_NeoMatrix(4, 8, MATRIX_PIN,
   NEO_GRB            + NEO_KHZ800);
 
 
-int w    = matrix.width();
-int h    = matrix.height();
-int rx,ry,rr,rg,rb;
+uint16_t w    = matrix.width();
+uint16_t h    = matrix.height();
 State current_state;
 boolean detect;
 uint16_t range;
 Timer t;
 int scan_event;
-int srs_transition_count;
-int lrs_transition_count;
-int ad_transition_count;
-
+int16_t srs_transition_count;
+int16_t lrs_transition_count;
+int16_t ad_transition_count;
 //holds the "walkers" for the long range scanner.
-uint16_t lrs_walkers[SRS_TRANSITION-1][5]; 
- 
+int16_t lrs_walkers[SRS_TRANSITION-1][6]; 
+uint16_t lrs_walker_delay;
+//values for srs
+uint16_t srs_delay;
+
 void setup() {
   Serial.begin(9600);
-  Serial.println("Setting up...");
+  randomSeed(analogRead(0));
   pinMode(SONAR_PIN,INPUT);
   pinMode(SPEAKER_PIN,OUTPUT);
   matrix.begin();
   matrix.setBrightness(10);
-  matrix.fillScreen(0);
-  matrix.show();
   delay(500); //allow sonar to calibrate and get first reading
+  for (uint16_t i; i<SRS_TRANSITION-1;i++) {
+    lrs_walkers[i][0]=random(4);
+    lrs_walkers[i][1]=random(8);
+    lrs_walkers[i][2]=random(8);
+    lrs_walkers[i][3]=random(1,255);    
+    lrs_walkers[i][4]=random(1,255); 
+    lrs_walkers[i][5]=random(1,255);    
+  }
   startLongRangeScan();
 }
 
@@ -79,8 +85,31 @@ void loop() {
             detect=false;                  
          }
          if (srs_transition_count >= SRS_TRANSITION) {
-          startShortRangeScan();
+            startShortRangeScan();
          }
+        //move walkers
+        matrix.fillScreen(0);
+        for (uint16_t i=0;i<=srs_transition_count;i++){
+/*
+          Serial.print(i);Serial.print(" ");
+          Serial.print(lrs_walkers[i][0]);Serial.print(" ");
+          Serial.print(lrs_walkers[i][1]);Serial.print(" "); 
+          Serial.print(lrs_walkers[i][2]);Serial.print(" ");
+          Serial.print(lrs_walkers[i][3]);Serial.print(" ");
+          Serial.print(lrs_walkers[i][4]);Serial.print(" ");
+          Serial.print(lrs_walkers[i][5]);Serial.println(" ");
+*/
+          matrix.drawPixel(lrs_walkers[i][0],
+                           lrs_walkers[i][1],
+                           matrix.Color(
+                           lrs_walkers[i][3],
+                           lrs_walkers[i][4],
+                           lrs_walkers[i][5]));
+          moveWalker(i);         
+        }
+        matrix.show();
+        lrs_walker_delay=750-(700/SRS_TRANSITION)*srs_transition_count;
+        delay(lrs_walker_delay);
         break;
     
     case SHORT_RANGE_SCAN:
@@ -107,12 +136,17 @@ void loop() {
             }
             detect=false;
          }
-         if (lrs_transition_count >= LRS_TRANSITION) {
+        if (lrs_transition_count >= LRS_TRANSITION) {
             startLongRangeScan();
-         }
-         if (ad_transition_count >= AD_TRANSITION) {
+        }
+        if (ad_transition_count >= AD_TRANSITION) {
             AwesomeDetected();
-         }
+        }
+        matrix.drawPixel(random(w),random(h),matrix.Color(random(255), random(255), random(255)));
+        matrix.drawPixel(random(w),random(h),matrix.Color(random(255), random(255), random(255)));
+        matrix.show();
+        srs_delay=250-(240/AD_TRANSITION)*ad_transition_count;
+        delay(srs_delay);
       break;
 
     case AWESOME_DETECTED:
@@ -121,8 +155,6 @@ void loop() {
       break;
 
     case CLEAR:
-      matrix.fillScreen(0);
-      matrix.show();
       break;
   }
 
@@ -155,6 +187,8 @@ void startLongRangeScan() {
   Serial.println("Switching to long range scanner...");
   t.stop(scan_event);
   detect=false;
+  matrix.fillScreen(0);
+  matrix.show();
   current_state=LONG_RANGE_SCAN;
   srs_transition_count=0;  
   scan_event=t.every(1000,getRange);
@@ -165,6 +199,8 @@ void startShortRangeScan() {
   Serial.println("Switching to short range scanner...");
   t.stop(scan_event);
   detect=false;
+  matrix.fillScreen(0);
+  matrix.show();
   current_state=SHORT_RANGE_SCAN;
   lrs_transition_count=0; 
   ad_transition_count=0;
@@ -175,6 +211,8 @@ void AwesomeDetected() {
   Serial.println("Awesome detected!");
   t.stop(scan_event);
   detect=false;
+  matrix.fillScreen(0);
+  matrix.show();
   current_state=AWESOME_DETECTED;
   scan_event=t.after(5000L,Clear);
 }
@@ -182,6 +220,8 @@ void AwesomeDetected() {
 void Clear() {
   Serial.println("Clear...");
   detect=false;
+  matrix.fillScreen(0);
+  matrix.show();
   current_state=CLEAR;
   scan_event=t.after(15000L,startLongRangeScan);  
 }
@@ -189,53 +229,6 @@ void Clear() {
 void getRange() {
     range=pulseIn(SONAR_PIN, HIGH)/147;
     detect=true;
-}
-
-
-
-// Sorting function (Author: Bill Gentles, Nov. 12, 2010)
-void isort(uint16_t *a, int8_t n){
-  for (int i = 1; i < n; ++i)  {
-    uint16_t j = a[i];
-    int k;
-    for (k = i - 1; (k >= 0) && (j < a[k]); k--) {
-      a[k + 1] = a[k];
-    }
-    a[k + 1] = j;
-  }
-}
- 
-// Mode function, returning the mode or median.
-uint16_t mode(uint16_t *x,int n){
-  int i = 0;
-  int count = 0;
-  int maxCount = 0;
-  uint16_t mode = 0;
-  int bimodal;
-  int prevCount = 0;
-  while(i<(n-1)){
-    prevCount=count;
-    count=0;
-    while( x[i]==x[i+1] ) {
-      count++;
-      i++;
-    }
-    if( count > prevCount & count > maxCount) {
-      mode=x[i];
-      maxCount=count;
-      bimodal=0;
-    }
-    if( count == 0 ) {
-      i++;
-    }
-    if( count == maxCount ) {      //If the dataset has 2 or more modes.
-      bimodal=1;
-    }
-    if( mode==0 || bimodal==1 ) {  // Return the median if there is no mode.
-      mode=x[(n/2)];
-    }
-    return mode;
-  }
 }
 
 void lightRow(int row) {
@@ -252,3 +245,149 @@ void playTone(int tone, int duration) {
     delayMicroseconds(tone);
   }
 }
+
+void correctForWall(uint16_t walker, uint16_t dest_index, uint16_t bound) {
+/*
+  Serial.print("++++Correct ");Serial.print(walker);Serial.print(" ");
+  Serial.print(lrs_walkers[walker][0]);Serial.print(" ");
+  Serial.print(" ");Serial.print(lrs_walkers[walker][1]);Serial.print(" "); 
+  Serial.print(" ");Serial.print(lrs_walkers[walker][2]);Serial.print(" ");
+  Serial.print(" ");Serial.print(lrs_walkers[walker][3]);Serial.print(" ");
+  Serial.print(" ");Serial.print(lrs_walkers[walker][4]);Serial.print(" ");
+  Serial.print(" ");Serial.print(lrs_walkers[walker][5]);Serial.println(" ");
+*/
+  if (lrs_walkers[walker][dest_index]<0 || lrs_walkers[walker][dest_index] >= bound) {
+       lrs_walkers[walker][dest_index]=max(0,lrs_walkers[walker][dest_index]);
+       lrs_walkers[walker][dest_index]=min(lrs_walkers[walker][dest_index],bound-1);
+       lrs_walkers[walker][2]=random(8);
+/*        
+        Serial.print("++++Fixing impact ");Serial.print(walker);Serial.print(" ");
+        Serial.print(lrs_walkers[walker][0]);Serial.print(" ");
+        Serial.print(" ");Serial.print(lrs_walkers[walker][1]);Serial.print(" "); 
+        Serial.print(" ");Serial.print(lrs_walkers[walker][2]);Serial.print(" ");
+        Serial.print(" ");Serial.print(lrs_walkers[walker][3]);Serial.print(" ");
+        Serial.print(" ");Serial.print(lrs_walkers[walker][4]);Serial.print(" ");
+        Serial.print(" ");Serial.print(lrs_walkers[walker][5]);Serial.println(" ");
+*/
+       moveWalker(walker);
+  }
+}
+
+void moveUp(uint16_t walker) {
+/*
+  Serial.print("++Up ");Serial.print(walker);Serial.print(" ");
+  Serial.print(lrs_walkers[walker][0]);Serial.print(" ");
+  Serial.print(" ");Serial.print(lrs_walkers[walker][1]);Serial.print(" "); 
+  Serial.print(" ");Serial.print(lrs_walkers[walker][2]);Serial.print(" ");
+  Serial.print(" ");Serial.print(lrs_walkers[walker][3]);Serial.print(" ");
+  Serial.print(" ");Serial.print(lrs_walkers[walker][4]);Serial.print(" ");
+  Serial.print(" ");Serial.print(lrs_walkers[walker][5]);Serial.println(" ");
+*/
+  lrs_walkers[walker][1] -=1;
+  correctForWall(walker,1,h);
+/*
+  Serial.print("-- ");Serial.print(lrs_walkers[walker][0]);Serial.print(" ");
+  Serial.print(" ");Serial.print(lrs_walkers[walker][1]);Serial.print(" "); 
+  Serial.print(" ");Serial.print(lrs_walkers[walker][2]);Serial.print(" ");
+  Serial.print(" ");Serial.print(lrs_walkers[walker][3]);Serial.print(" ");
+  Serial.print(" ");Serial.print(lrs_walkers[walker][4]);Serial.print(" ");
+  Serial.print(" ");Serial.print(lrs_walkers[walker][5]);Serial.println(" ");
+*/
+}
+
+void moveDown(uint16_t walker) {
+/*
+  Serial.print("++Down ");Serial.print(walker);Serial.print(" ");
+  Serial.print(lrs_walkers[walker][0]);Serial.print(" ");  Serial.print(" ");Serial.print(lrs_walkers[walker][1]);Serial.print(" "); 
+  Serial.print(" ");Serial.print(lrs_walkers[walker][2]);Serial.print(" ");
+  Serial.print(" ");Serial.print(lrs_walkers[walker][3]);Serial.print(" ");
+  Serial.print(" ");Serial.print(lrs_walkers[walker][4]);Serial.print(" ");
+  Serial.print(" ");Serial.print(lrs_walkers[walker][5]);Serial.println(" ");
+*/
+  lrs_walkers[walker][1] +=1;
+  correctForWall(walker,1,h); 
+/*
+  Serial.print("-- ");Serial.print(lrs_walkers[walker][0]);Serial.print(" ");
+  Serial.print(" ");Serial.print(lrs_walkers[walker][1]);Serial.print(" "); 
+  Serial.print(" ");Serial.print(lrs_walkers[walker][2]);Serial.print(" ");
+  Serial.print(" ");Serial.print(lrs_walkers[walker][3]);Serial.print(" ");
+  Serial.print(" ");Serial.print(lrs_walkers[walker][4]);Serial.print(" ");
+  Serial.print(" ");Serial.print(lrs_walkers[walker][5]);Serial.println(" ");
+*/ 
+}
+
+void moveLeft(uint16_t walker) {
+/*     
+  Serial.print("++Left ");Serial.print(walker);Serial.print(" ");
+  Serial.print(lrs_walkers[walker][0]);Serial.print(" ");  Serial.print(" ");Serial.print(lrs_walkers[walker][1]);Serial.print(" "); 
+  Serial.print(" ");Serial.print(lrs_walkers[walker][2]);Serial.print(" ");
+  Serial.print(" ");Serial.print(lrs_walkers[walker][3]);Serial.print(" ");
+  Serial.print(" ");Serial.print(lrs_walkers[walker][4]);Serial.print(" ");
+  Serial.print(" ");Serial.print(lrs_walkers[walker][5]);Serial.println(" ");
+*/
+  lrs_walkers[walker][0] -=1;
+  correctForWall(walker,0,w);
+/* 
+  Serial.print("-- ");Serial.print(lrs_walkers[walker][0]);Serial.print(" ");
+  Serial.print(" ");Serial.print(lrs_walkers[walker][1]);Serial.print(" "); 
+  Serial.print(" ");Serial.print(lrs_walkers[walker][2]);Serial.print(" ");
+  Serial.print(" ");Serial.print(lrs_walkers[walker][3]);Serial.print(" ");
+  Serial.print(" ");Serial.print(lrs_walkers[walker][4]);Serial.print(" ");
+  Serial.print(" ");Serial.print(lrs_walkers[walker][5]);Serial.println(" ");
+*/ 
+}
+
+void moveRight(uint16_t walker) {
+/*
+  Serial.print("++Right ");Serial.print(walker);Serial.print(" ");
+  Serial.print(lrs_walkers[walker][0]);Serial.print(" ");  Serial.print(" ");Serial.print(lrs_walkers[walker][1]);Serial.print(" "); 
+  Serial.print(" ");Serial.print(lrs_walkers[walker][2]);Serial.print(" ");
+  Serial.print(" ");Serial.print(lrs_walkers[walker][3]);Serial.print(" ");
+  Serial.print(" ");Serial.print(lrs_walkers[walker][4]);Serial.print(" ");
+  Serial.print(" ");Serial.print(lrs_walkers[walker][5]);Serial.println(" ");
+*/
+  lrs_walkers[walker][0] +=1;
+  correctForWall(walker,0,w); 
+/*
+  Serial.print("-- ");Serial.print(lrs_walkers[walker][0]);Serial.print(" ");
+  Serial.print(" ");Serial.print(lrs_walkers[walker][1]);Serial.print(" "); 
+  Serial.print(" ");Serial.print(lrs_walkers[walker][2]);Serial.print(" ");
+  Serial.print(" ");Serial.print(lrs_walkers[walker][3]);Serial.print(" ");
+  Serial.print(" ");Serial.print(lrs_walkers[walker][4]);Serial.print(" ");
+  Serial.print(" ");Serial.print(lrs_walkers[walker][5]);Serial.println(" ");
+*/ 
+}
+
+void moveWalker(uint16_t walker) {
+  switch(lrs_walkers[walker][2]) {
+    case 0: //up, left
+            moveUp(walker);
+            moveLeft(walker);
+            break;
+    case 1: //up
+            moveUp(walker);
+            break;
+    case 2: //up, right
+            moveUp(walker);
+            moveRight(walker);
+            break;
+    case 3: //right
+            moveRight(walker);
+            break;
+    case 4: //down, right
+            moveDown(walker);
+            moveRight(walker);
+            break;
+    case 5: //down
+            moveDown(walker);
+            break;
+    case 6: //down, left
+            moveDown(walker);
+            moveLeft(walker);
+            break;
+    case 7: //left
+            moveLeft(walker);
+            break;           
+  }
+}
+
