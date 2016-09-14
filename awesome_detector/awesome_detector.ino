@@ -12,6 +12,10 @@
 #define MATRIX_PIN 6
 #define SONAR_PIN 5
 #define SPEAKER_PIN 10
+#define LRS_TRANSITION 10
+#define SRS_TRANSITION 5
+#define AD_TRANSITION 15
+
 
 enum State {
   LONG_RANGE_SCAN,
@@ -29,15 +33,18 @@ Adafruit_NeoMatrix matrix = Adafruit_NeoMatrix(4, 8, MATRIX_PIN,
 int w    = matrix.width();
 int h    = matrix.height();
 int rx,ry,rr,rg,rb;
-int8_t arraysize = 9;
-uint16_t rangevalue[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0};
-uint16_t sorted_rangevalue[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0};
 State current_state;
 boolean detect;
 uint16_t range;
 Timer t;
 int scan_event;
+int srs_transition_count;
+int lrs_transition_count;
+int ad_transition_count;
 
+//holds the "walkers" for the long range scanner.
+uint16_t lrs_walkers[SRS_TRANSITION-1][5]; 
+ 
 void setup() {
   Serial.begin(9600);
   Serial.println("Setting up...");
@@ -48,10 +55,6 @@ void setup() {
   matrix.fillScreen(0);
   matrix.show();
   delay(500); //allow sonar to calibrate and get first reading
-  //fill the range array with the first nine values
-  for (int i=0;i<arraysize;i++) {
-    getRange();
-  }
   startLongRangeScan();
 }
 
@@ -59,18 +62,67 @@ void loop() {
   switch (current_state) {
     case LONG_RANGE_SCAN:
         if (detect) {
-          Serial.print("Range: ");Serial.println(range);
-          detect=false;
-        }
-      break;
+            if (range>90) {
+              srs_transition_count=0;
+            } else if (range>60) {
+              srs_transition_count--;
+              srs_transition_count=max(0,srs_transition_count);
+            } else if (range>36) {
+              srs_transition_count++;
+            } else if (range>12) {
+              srs_transition_count+=2;
+            }
+            if (range>12) {
+              Serial.print("Range: ");Serial.println(range);
+              Serial.print("srs_transition_count: ");Serial.println(srs_transition_count);
+            }
+            detect=false;                  
+         }
+         if (srs_transition_count >= SRS_TRANSITION) {
+          startShortRangeScan();
+         }
+        break;
     
     case SHORT_RANGE_SCAN:
+        if (detect) {
+            if (range>40) {
+              lrs_transition_count++;
+              ad_transition_count=0;
+            } else if (range>30) {
+              ad_transition_count--;
+              ad_transition_count=max(0,ad_transition_count);
+            } else if (range>20) {
+              lrs_transition_count--;
+              lrs_transition_count=max(0,lrs_transition_count);
+              ad_transition_count++;
+            } else if (range>12) {
+              lrs_transition_count--;
+              lrs_transition_count=max(0,lrs_transition_count);
+              ad_transition_count++;
+            }
+            if (range>12) {
+              Serial.print("Range: ");Serial.println(range);
+              Serial.print("lrs_transition_count: ");Serial.println(lrs_transition_count);
+              Serial.print("ad_transition_count: ");Serial.println(ad_transition_count); 
+            }
+            detect=false;
+         }
+         if (lrs_transition_count >= LRS_TRANSITION) {
+            startLongRangeScan();
+         }
+         if (ad_transition_count >= AD_TRANSITION) {
+            AwesomeDetected();
+         }
       break;
 
     case AWESOME_DETECTED:
+      matrix.fillScreen(matrix.Color(255, 0, 0));
+      matrix.show();
       break;
 
     case CLEAR:
+      matrix.fillScreen(0);
+      matrix.show();
       break;
   }
 
@@ -102,28 +154,40 @@ void loop() {
 void startLongRangeScan() {
   Serial.println("Switching to long range scanner...");
   t.stop(scan_event);
-  current_state=LONG_RANGE_SCAN;
-  scan_event=t.every(1000,getRange);
   detect=false;
+  current_state=LONG_RANGE_SCAN;
+  srs_transition_count=0;  
+  scan_event=t.every(1000,getRange);
+
+}
+
+void startShortRangeScan() {
+  Serial.println("Switching to short range scanner...");
+  t.stop(scan_event);
+  detect=false;
+  current_state=SHORT_RANGE_SCAN;
+  lrs_transition_count=0; 
+  ad_transition_count=0;
+  scan_event=t.every(250,getRange);
+}
+
+void AwesomeDetected() {
+  Serial.println("Awesome detected!");
+  t.stop(scan_event);
+  detect=false;
+  current_state=AWESOME_DETECTED;
+  scan_event=t.after(5000L,Clear);
+}
+
+void Clear() {
+  Serial.println("Clear...");
+  detect=false;
+  current_state=CLEAR;
+  scan_event=t.after(15000L,startLongRangeScan);  
 }
 
 void getRange() {
-  int pulse;
-  
-    pulse=pulseIn(SONAR_PIN, HIGH);
-    Serial.print(pulse);Serial.print(" ");Serial.println(pulse/147);
-    pulse/=147;
-    if (pulse>=10) { //we won't change the view if we read too low or too high
-      for (int i=0;i<arraysize-1;++i) { //move all existing array entries down one
-        rangevalue[i]=rangevalue[i+1];
-      }
-      rangevalue[arraysize-1]=pulse;
-      for (int i=0;i<arraysize;++i) {
-        sorted_rangevalue[i]=rangevalue[i];
-      }
-      isort(rangevalue,arraysize);        // sort samples
-      range = mode(rangevalue,arraysize);  // get median value and convert to inches 
-    } 
+    range=pulseIn(SONAR_PIN, HIGH)/147;
     detect=true;
 }
 
