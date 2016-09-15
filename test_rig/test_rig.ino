@@ -71,8 +71,8 @@ void loop() {
       playTone(255-(i/2),1);   
   }
 */
-    Serial.println(analogRead(0)-analogRead(1)+analogRead(2)-analogRead(3)+analogRead(4));
-    delay(100);
+  Countdown();
+  delay(1000);
   t.update();
 /*
   int lit_rows;   // how many rows of the view we'll light up  
@@ -318,6 +318,10 @@ void Countdown() {
         delay(1000);
         matrix.drawRect(0,i,w,2,0);
         matrix.show();
+      }
+      for (int i=1;i<=3;i++) {
+        playTone(75,50); 
+        delay(50);       
       }
 }
 

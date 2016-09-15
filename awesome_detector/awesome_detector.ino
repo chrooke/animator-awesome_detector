@@ -238,7 +238,9 @@ void Clear() {
   matrix.fillScreen(0);
   matrix.show();
   current_state=CLEAR;
-  scan_event=t.after(15000L,startLongRangeScan);  
+  delay(15000);
+  startLongRangeScan();
+//  scan_event=t.after(15000L,startLongRangeScan);  
 }
 
 void getRange() {
@@ -414,6 +416,10 @@ void Countdown() {
         delay(1000);
         matrix.drawRect(0,i,w,2,0);
         matrix.show();
+      }
+      for (int i=1;i<=3;i++) {
+        playTone(75,50); 
+        delay(50);       
       }
 }
 
