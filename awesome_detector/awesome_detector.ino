@@ -1,6 +1,9 @@
 //Comment out to make the program silent
 #define AUDIO
 
+//Remove comment to get debug information to Serial
+//#define DEBUG 
+
 #include <Adafruit_GFX.h>
 #include <Adafruit_NeoMatrix.h>
 #include <Adafruit_NeoPixel.h>
@@ -44,7 +47,9 @@ int16_t lrs_walkers[SRS_TRANSITION-1][6];
 
 
 void setup() {
+#ifdef DEBUG
   Serial.begin(9600);
+#endif
   randomSeed(analogRead(0)-analogRead(1)+analogRead(2)-analogRead(3)+analogRead(4));
   pinMode(SONAR_PIN,INPUT);
   pinMode(SPEAKER_PIN,OUTPUT);
@@ -79,10 +84,10 @@ void loop() {
               upgrade_transition_count+=2;
             }
             if (range>12) {
-              /*
+#ifdef DEBUG
               Serial.print("Range: ");Serial.println(range);
               Serial.print("upgrade_transition_count: ");Serial.println(upgrade_transition_count);
-              */
+#endif
             }
             detect=false;                  
          }
@@ -159,7 +164,9 @@ void loop() {
 }
 
 void startLongRangeScan() {
+#ifdef DEBUG
   Serial.println("Switching to long range scanner...");
+#endif
   t.stop(scan_event);
   detect=false;
   matrix.fillScreen(0);
@@ -171,7 +178,9 @@ void startLongRangeScan() {
 }
 
 void startShortRangeScan() {
+#ifdef DEBUG
   Serial.println("Switching to short range scanner...");
+#endif
   t.stop(scan_event);
   detect=false;
   current_state=SHORT_RANGE_SCAN;
@@ -189,7 +198,9 @@ void startShortRangeScan() {
 }
 
 void AwesomeDetected() {
+#ifdef DEBUG
   Serial.println("Awesome detected!");
+#endif
   t.stop(scan_event);
   detect=false;
   matrix.fillScreen(0);
@@ -202,7 +213,9 @@ void AwesomeDetected() {
 }
 
 void Clear() {
+#ifdef DEBUG
   Serial.println("Clear...");
+#endif
   detect=false;
   WipeOut(matrix.Color(random(255),random(255),random(255)),100);
   WipeOut(matrix.Color(random(255),random(255),random(255)),75);  
@@ -255,35 +268,35 @@ void moveDown(uint16_t walker) {
 void moveLeft(uint16_t walker) {
   lrs_walkers[walker][0] -=1;
   correctForWall(walker,0,w);
-/* 
+#ifdef DEBUG
   Serial.print("-- ");Serial.print(lrs_walkers[walker][0]);Serial.print(" ");
   Serial.print(" ");Serial.print(lrs_walkers[walker][1]);Serial.print(" "); 
   Serial.print(" ");Serial.print(lrs_walkers[walker][2]);Serial.print(" ");
   Serial.print(" ");Serial.print(lrs_walkers[walker][3]);Serial.print(" ");
   Serial.print(" ");Serial.print(lrs_walkers[walker][4]);Serial.print(" ");
   Serial.print(" ");Serial.print(lrs_walkers[walker][5]);Serial.println(" ");
-*/ 
+#endif
 }
 
 void moveRight(uint16_t walker) {
-/*
+#ifdef DEBUG
   Serial.print("++Right ");Serial.print(walker);Serial.print(" ");
   Serial.print(lrs_walkers[walker][0]);Serial.print(" ");  Serial.print(" ");Serial.print(lrs_walkers[walker][1]);Serial.print(" "); 
   Serial.print(" ");Serial.print(lrs_walkers[walker][2]);Serial.print(" ");
   Serial.print(" ");Serial.print(lrs_walkers[walker][3]);Serial.print(" ");
   Serial.print(" ");Serial.print(lrs_walkers[walker][4]);Serial.print(" ");
   Serial.print(" ");Serial.print(lrs_walkers[walker][5]);Serial.println(" ");
-*/
+#endif
   lrs_walkers[walker][0] +=1;
   correctForWall(walker,0,w); 
-/*
+#ifdef DEBUG
   Serial.print("-- ");Serial.print(lrs_walkers[walker][0]);Serial.print(" ");
   Serial.print(" ");Serial.print(lrs_walkers[walker][1]);Serial.print(" "); 
   Serial.print(" ");Serial.print(lrs_walkers[walker][2]);Serial.print(" ");
   Serial.print(" ");Serial.print(lrs_walkers[walker][3]);Serial.print(" ");
   Serial.print(" ");Serial.print(lrs_walkers[walker][4]);Serial.print(" ");
   Serial.print(" ");Serial.print(lrs_walkers[walker][5]);Serial.println(" ");
-*/ 
+#endif
 }
 
 void moveWalker(uint16_t walker) {
