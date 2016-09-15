@@ -1,6 +1,9 @@
 // Adafruit_NeoMatrix example for single NeoPixel Shield.
 // Scrolls 'Howdy' across the matrix in a portrait (vertical) orientation.
 
+//Comment out to make the program silent
+#define AUDIO
+
 #include <Adafruit_GFX.h>
 #include <Adafruit_NeoMatrix.h>
 #include <Adafruit_NeoPixel.h>
@@ -159,7 +162,9 @@ void loop() {
       matrix.setCursor(random(4)-2, 0);
       matrix.print(F("!"));
       matrix.show();
+#ifdef AUDIO
       playTone(random(75,300),random(5,25));
+#endif
       delay(100);
       break;
 
@@ -216,7 +221,9 @@ void startShortRangeScan() {
   for (int i=255;i>=0;i--) {
     matrix.drawRect(0,0,w,h,matrix.Color(i,i,i));
     matrix.show();
+  #ifdef AUDIO
     playTone(255-(i/2)-25,1);
+  #endif
   }
 }
 
@@ -414,22 +421,32 @@ void Countdown() {
       matrix.fillScreen(matrix.Color(255,0,0));
       matrix.show();
       for (int i=0;i<h;i+=2) {  
+  #ifdef AUDIO
         playTone(75,150);
         delay(850);
+  #else
+        delay(1000);
+  #endif
         matrix.drawRect(0,i,w,2,0);
         matrix.show();
       }
+  #ifdef AUDIO
       for (int i=1;i<=3;i++) {
         playTone(75,50); 
         delay(50);       
       }
+  #endif
 }
 
 void WipeOut(uint16_t color,int drag) {
       for (int i=1;i<=h/2;i++) {
         matrix.fillRect((i<3)?((w/2)-1):(0),(h/2)-i,(i<3)?(2):(w),i*2,color);     
         matrix.show();
+  #ifdef AUDIO
         playTone(175-(20*i),drag);
+  #else
+        delay(drag);
+  #endif
       }
 }
 
