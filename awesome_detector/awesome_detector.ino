@@ -24,7 +24,7 @@ enum State {
 };
 
 Adafruit_NeoMatrix matrix = Adafruit_NeoMatrix(4, 8, MATRIX_PIN,
-  NEO_MATRIX_TOP     + NEO_MATRIX_RIGHT +
+  NEO_MATRIX_BOTTOM     + NEO_MATRIX_LEFT +
   NEO_MATRIX_COLUMNS + NEO_MATRIX_PROGRESSIVE,
   NEO_GRB            + NEO_KHZ800);
 
@@ -36,14 +36,12 @@ boolean detect;
 uint16_t range;
 Timer t;
 int scan_event;
-int16_t srs_transition_count;
-int16_t lrs_transition_count;
-int16_t ad_transition_count;
+int16_t upgrade_transition_count;
+int16_t downgrade_transition_count;
+uint16_t state_delay;
 //holds the "walkers" for the long range scanner.
 int16_t lrs_walkers[SRS_TRANSITION-1][6]; 
-uint16_t lrs_walker_delay;
-//values for srs
-uint16_t srs_delay;
+
 
 void setup() {
   Serial.begin(9600);
@@ -52,6 +50,8 @@ void setup() {
   pinMode(SPEAKER_PIN,OUTPUT);
   matrix.begin();
   matrix.setBrightness(10);
+  matrix.setTextWrap(false);
+  matrix.setTextColor(matrix.Color(255,0,0));
   delay(500); //allow sonar to calibrate and get first reading
   for (uint16_t i; i<SRS_TRANSITION-1;i++) {
     lrs_walkers[i][0]=random(4);
@@ -69,27 +69,29 @@ void loop() {
     case LONG_RANGE_SCAN:
         if (detect) {
             if (range>90) {
-              srs_transition_count=0;
+              upgrade_transition_count=0;
             } else if (range>60) {
-              srs_transition_count--;
-              srs_transition_count=max(0,srs_transition_count);
+              upgrade_transition_count--;
+              upgrade_transition_count=max(0,upgrade_transition_count);
             } else if (range>36) {
-              srs_transition_count++;
+              upgrade_transition_count++;
             } else if (range>12) {
-              srs_transition_count+=2;
+              upgrade_transition_count+=2;
             }
             if (range>12) {
+              /*
               Serial.print("Range: ");Serial.println(range);
-              Serial.print("srs_transition_count: ");Serial.println(srs_transition_count);
+              Serial.print("upgrade_transition_count: ");Serial.println(upgrade_transition_count);
+              */
             }
             detect=false;                  
          }
-         if (srs_transition_count >= SRS_TRANSITION) {
+         if (upgrade_transition_count >= SRS_TRANSITION) {
             startShortRangeScan();
          }
         //move walkers
         matrix.fillScreen(0);
-        for (uint16_t i=0;i<=srs_transition_count;i++){
+        for (uint16_t i=0;i<=upgrade_transition_count;i++){
 /*
           Serial.print(i);Serial.print(" ");
           Serial.print(lrs_walkers[i][0]);Serial.print(" ");
@@ -108,50 +110,56 @@ void loop() {
           moveWalker(i);         
         }
         matrix.show();
-        lrs_walker_delay=750-(700/SRS_TRANSITION)*srs_transition_count;
-        delay(lrs_walker_delay);
+        state_delay=750-(700/SRS_TRANSITION)*upgrade_transition_count;
+        delay(state_delay);
         break;
     
     case SHORT_RANGE_SCAN:
         if (detect) {
             if (range>40) {
-              lrs_transition_count++;
-              ad_transition_count=0;
+              downgrade_transition_count++;
+              upgrade_transition_count=0;
             } else if (range>30) {
-              ad_transition_count--;
-              ad_transition_count=max(0,ad_transition_count);
+              upgrade_transition_count--;
+              upgrade_transition_count=max(0,upgrade_transition_count);
             } else if (range>20) {
-              lrs_transition_count--;
-              lrs_transition_count=max(0,lrs_transition_count);
-              ad_transition_count++;
+              downgrade_transition_count--;
+              downgrade_transition_count=max(0,downgrade_transition_count);
+              upgrade_transition_count++;
             } else if (range>12) {
-              lrs_transition_count--;
-              lrs_transition_count=max(0,lrs_transition_count);
-              ad_transition_count++;
+              downgrade_transition_count-=2;
+              downgrade_transition_count=max(0,downgrade_transition_count);
+              upgrade_transition_count++;
             }
             if (range>12) {
+              /*
               Serial.print("Range: ");Serial.println(range);
-              Serial.print("lrs_transition_count: ");Serial.println(lrs_transition_count);
-              Serial.print("ad_transition_count: ");Serial.println(ad_transition_count); 
+              Serial.print("downgrade_transition_count: ");Serial.println(downgrade_transition_count);
+              Serial.print("upgrade_transition_count: ");Serial.println(upgrade_transition_count); 
+              */
             }
             detect=false;
          }
-        if (lrs_transition_count >= LRS_TRANSITION) {
+        if (downgrade_transition_count >= LRS_TRANSITION) {
             startLongRangeScan();
         }
-        if (ad_transition_count >= AD_TRANSITION) {
+        if (upgrade_transition_count >= AD_TRANSITION) {
             AwesomeDetected();
         }
         matrix.drawPixel(random(w),random(h),matrix.Color(random(255), random(255), random(255)));
         matrix.drawPixel(random(w),random(h),matrix.Color(random(255), random(255), random(255)));
         matrix.show();
-        srs_delay=250-(240/AD_TRANSITION)*ad_transition_count;
-        delay(srs_delay);
+        state_delay=250-(240/AD_TRANSITION)*upgrade_transition_count;
+        delay(state_delay);
       break;
 
     case AWESOME_DETECTED:
-      matrix.fillScreen(matrix.Color(255, 0, 0));
+      matrix.fillScreen(0);
+      matrix.setTextColor(matrix.Color(random(255), random(255), random(255)));
+      matrix.setCursor(random(4)-2, 0);
+      matrix.print(F("!"));
       matrix.show();
+      delay(100);
       break;
 
     case CLEAR:
@@ -190,9 +198,9 @@ void startLongRangeScan() {
   matrix.fillScreen(0);
   matrix.show();
   current_state=LONG_RANGE_SCAN;
-  srs_transition_count=0;  
+  upgrade_transition_count=0;  
   scan_event=t.every(1000,getRange);
-
+  Countdown();
 }
 
 void startShortRangeScan() {
@@ -202,8 +210,8 @@ void startShortRangeScan() {
   matrix.fillScreen(0);
   matrix.show();
   current_state=SHORT_RANGE_SCAN;
-  lrs_transition_count=0; 
-  ad_transition_count=0;
+  downgrade_transition_count=0; 
+  upgrade_transition_count=0;
   scan_event=t.every(250,getRange);
 }
 
@@ -389,5 +397,16 @@ void moveWalker(uint16_t walker) {
             moveLeft(walker);
             break;           
   }
+}
+
+void Countdown() {
+      for (int i=h;i>0;i-=2) {
+        matrix.fillScreen(0);        
+        for (int j=h-i;j<h;j++) {
+          matrix.drawLine(0,j,w,j,matrix.Color(255,0,0));
+        }
+        matrix.show();
+        delay(1000); 
+      }
 }
 
