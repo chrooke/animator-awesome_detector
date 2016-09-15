@@ -207,12 +207,16 @@ void startShortRangeScan() {
   Serial.println("Switching to short range scanner...");
   t.stop(scan_event);
   detect=false;
-  matrix.fillScreen(0);
-  matrix.show();
   current_state=SHORT_RANGE_SCAN;
   downgrade_transition_count=0; 
   upgrade_transition_count=0;
   scan_event=t.every(250,getRange);
+  matrix.fillScreen(0);
+  for (int i=255;i>=0;i--) {
+    matrix.drawRect(0,0,w,h,matrix.Color(i,i,i));
+    matrix.show();
+    playTone(255-(i/2)-25,1);
+  }
 }
 
 void AwesomeDetected() {
