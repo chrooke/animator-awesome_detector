@@ -222,6 +222,8 @@ void AwesomeDetected() {
   matrix.fillScreen(0);
   matrix.show();
   current_state=AWESOME_DETECTED;
+  WipeOut(matrix.Color(0,255,0),100);  
+  WipeOut(0,100);
   scan_event=t.after(5000L,Clear);
 }
 
@@ -407,6 +409,14 @@ void Countdown() {
         delay(1000);
         matrix.drawRect(0,i,w,2,0);
         matrix.show();
+      }
+}
+
+void WipeOut(uint16_t color,int drag) {
+      for (int i=1;i<=h/2;i++) {
+        matrix.fillRect((i<3)?((w/2)-1):(0),(h/2)-i,(i<3)?(2):(w),i*2,color);     
+        matrix.show();
+        delay(drag);
       }
 }
 
