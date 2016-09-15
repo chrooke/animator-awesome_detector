@@ -173,28 +173,6 @@ void loop() {
   }
 
   t.update();
-/*
-  int lit_rows;   // how many rows of the view we'll light up  
-                  
-    matrix.fillScreen(0);
-    lit_rows=9-(modE/10);
-    Serial.print(pulse);Serial.print(" ");Serial.print(modE);Serial.print(" ");Serial.println(lit_rows);
-    for (int i=lit_rows-1;i>=0;--i) {
-      lightRow(i);
-    }
-    matrix.show();
-
-  delay(60); // wait between samples
-*/
-
-/*
-  playTone(125,150);
-  delay(1000);
-  playTone(125,300);
-  delay(1000);
-  playTone(125,150);
-  delay(5000);
-*/
 }
 
 void startLongRangeScan() {
