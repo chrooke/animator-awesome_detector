@@ -35,7 +35,7 @@ State current_state;
 boolean detect;
 uint16_t range;
 Timer t;
-int scan_event;
+uint8_t scan_event;
 int16_t upgrade_transition_count;
 int16_t downgrade_transition_count;
 uint16_t state_delay;
@@ -54,8 +54,8 @@ void setup() {
   matrix.setTextColor(matrix.Color(255,0,0));
   delay(500); //allow sonar to calibrate and get first reading
   for (uint16_t i; i<SRS_TRANSITION-1;i++) {
-    lrs_walkers[i][0]=random(4);
-    lrs_walkers[i][1]=random(8);
+    lrs_walkers[i][0]=random(w);
+    lrs_walkers[i][1]=random(h);
     lrs_walkers[i][2]=random(8);
     lrs_walkers[i][3]=random(1,255);    
     lrs_walkers[i][4]=random(1,255); 
@@ -92,15 +92,6 @@ void loop() {
         //move walkers
         matrix.fillScreen(0);
         for (uint16_t i=0;i<=upgrade_transition_count;i++){
-/*
-          Serial.print(i);Serial.print(" ");
-          Serial.print(lrs_walkers[i][0]);Serial.print(" ");
-          Serial.print(lrs_walkers[i][1]);Serial.print(" "); 
-          Serial.print(lrs_walkers[i][2]);Serial.print(" ");
-          Serial.print(lrs_walkers[i][3]);Serial.print(" ");
-          Serial.print(lrs_walkers[i][4]);Serial.print(" ");
-          Serial.print(lrs_walkers[i][5]);Serial.println(" ");
-*/
           matrix.drawPixel(lrs_walkers[i][0],
                            lrs_walkers[i][1],
                            matrix.Color(
@@ -132,11 +123,6 @@ void loop() {
               upgrade_transition_count++;
             }
             if (range>12) {
-              /*
-              Serial.print("Range: ");Serial.println(range);
-              Serial.print("downgrade_transition_count: ");Serial.println(downgrade_transition_count);
-              Serial.print("upgrade_transition_count: ");Serial.println(upgrade_transition_count); 
-              */
             }
             detect=false;
          }
@@ -248,84 +234,25 @@ void playTone(int tone, int duration) {
 }
 
 void correctForWall(uint16_t walker, uint16_t dest_index, uint16_t bound) {
-/*
-  Serial.print("++++Correct ");Serial.print(walker);Serial.print(" ");
-  Serial.print(lrs_walkers[walker][0]);Serial.print(" ");
-  Serial.print(" ");Serial.print(lrs_walkers[walker][1]);Serial.print(" "); 
-  Serial.print(" ");Serial.print(lrs_walkers[walker][2]);Serial.print(" ");
-  Serial.print(" ");Serial.print(lrs_walkers[walker][3]);Serial.print(" ");
-  Serial.print(" ");Serial.print(lrs_walkers[walker][4]);Serial.print(" ");
-  Serial.print(" ");Serial.print(lrs_walkers[walker][5]);Serial.println(" ");
-*/
   if (lrs_walkers[walker][dest_index]<0 || lrs_walkers[walker][dest_index] >= bound) {
        lrs_walkers[walker][dest_index]=max(0,lrs_walkers[walker][dest_index]);
        lrs_walkers[walker][dest_index]=min(lrs_walkers[walker][dest_index],bound-1);
        lrs_walkers[walker][2]=random(8);
-/*        
-        Serial.print("++++Fixing impact ");Serial.print(walker);Serial.print(" ");
-        Serial.print(lrs_walkers[walker][0]);Serial.print(" ");
-        Serial.print(" ");Serial.print(lrs_walkers[walker][1]);Serial.print(" "); 
-        Serial.print(" ");Serial.print(lrs_walkers[walker][2]);Serial.print(" ");
-        Serial.print(" ");Serial.print(lrs_walkers[walker][3]);Serial.print(" ");
-        Serial.print(" ");Serial.print(lrs_walkers[walker][4]);Serial.print(" ");
-        Serial.print(" ");Serial.print(lrs_walkers[walker][5]);Serial.println(" ");
-*/
        moveWalker(walker);
   }
 }
 
 void moveUp(uint16_t walker) {
-/*
-  Serial.print("++Up ");Serial.print(walker);Serial.print(" ");
-  Serial.print(lrs_walkers[walker][0]);Serial.print(" ");
-  Serial.print(" ");Serial.print(lrs_walkers[walker][1]);Serial.print(" "); 
-  Serial.print(" ");Serial.print(lrs_walkers[walker][2]);Serial.print(" ");
-  Serial.print(" ");Serial.print(lrs_walkers[walker][3]);Serial.print(" ");
-  Serial.print(" ");Serial.print(lrs_walkers[walker][4]);Serial.print(" ");
-  Serial.print(" ");Serial.print(lrs_walkers[walker][5]);Serial.println(" ");
-*/
   lrs_walkers[walker][1] -=1;
   correctForWall(walker,1,h);
-/*
-  Serial.print("-- ");Serial.print(lrs_walkers[walker][0]);Serial.print(" ");
-  Serial.print(" ");Serial.print(lrs_walkers[walker][1]);Serial.print(" "); 
-  Serial.print(" ");Serial.print(lrs_walkers[walker][2]);Serial.print(" ");
-  Serial.print(" ");Serial.print(lrs_walkers[walker][3]);Serial.print(" ");
-  Serial.print(" ");Serial.print(lrs_walkers[walker][4]);Serial.print(" ");
-  Serial.print(" ");Serial.print(lrs_walkers[walker][5]);Serial.println(" ");
-*/
 }
 
 void moveDown(uint16_t walker) {
-/*
-  Serial.print("++Down ");Serial.print(walker);Serial.print(" ");
-  Serial.print(lrs_walkers[walker][0]);Serial.print(" ");  Serial.print(" ");Serial.print(lrs_walkers[walker][1]);Serial.print(" "); 
-  Serial.print(" ");Serial.print(lrs_walkers[walker][2]);Serial.print(" ");
-  Serial.print(" ");Serial.print(lrs_walkers[walker][3]);Serial.print(" ");
-  Serial.print(" ");Serial.print(lrs_walkers[walker][4]);Serial.print(" ");
-  Serial.print(" ");Serial.print(lrs_walkers[walker][5]);Serial.println(" ");
-*/
   lrs_walkers[walker][1] +=1;
   correctForWall(walker,1,h); 
-/*
-  Serial.print("-- ");Serial.print(lrs_walkers[walker][0]);Serial.print(" ");
-  Serial.print(" ");Serial.print(lrs_walkers[walker][1]);Serial.print(" "); 
-  Serial.print(" ");Serial.print(lrs_walkers[walker][2]);Serial.print(" ");
-  Serial.print(" ");Serial.print(lrs_walkers[walker][3]);Serial.print(" ");
-  Serial.print(" ");Serial.print(lrs_walkers[walker][4]);Serial.print(" ");
-  Serial.print(" ");Serial.print(lrs_walkers[walker][5]);Serial.println(" ");
-*/ 
 }
 
 void moveLeft(uint16_t walker) {
-/*     
-  Serial.print("++Left ");Serial.print(walker);Serial.print(" ");
-  Serial.print(lrs_walkers[walker][0]);Serial.print(" ");  Serial.print(" ");Serial.print(lrs_walkers[walker][1]);Serial.print(" "); 
-  Serial.print(" ");Serial.print(lrs_walkers[walker][2]);Serial.print(" ");
-  Serial.print(" ");Serial.print(lrs_walkers[walker][3]);Serial.print(" ");
-  Serial.print(" ");Serial.print(lrs_walkers[walker][4]);Serial.print(" ");
-  Serial.print(" ");Serial.print(lrs_walkers[walker][5]);Serial.println(" ");
-*/
   lrs_walkers[walker][0] -=1;
   correctForWall(walker,0,w);
 /* 
