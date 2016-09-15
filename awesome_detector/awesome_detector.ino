@@ -45,7 +45,7 @@ int16_t lrs_walkers[SRS_TRANSITION-1][6];
 
 void setup() {
   Serial.begin(9600);
-  randomSeed(analogRead(0));
+  randomSeed(analogRead(0)-analogRead(1)+analogRead(2)-analogRead(3)+analogRead(4));
   pinMode(SONAR_PIN,INPUT);
   pinMode(SPEAKER_PIN,OUTPUT);
   matrix.begin();
@@ -159,6 +159,7 @@ void loop() {
       matrix.setCursor(random(4)-2, 0);
       matrix.print(F("!"));
       matrix.show();
+      playTone(random(75,300),random(5,25));
       delay(100);
       break;
 

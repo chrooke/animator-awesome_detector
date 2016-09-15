@@ -45,7 +45,7 @@ int16_t lrs_walkers[SRS_TRANSITION-1][6];
 
 void setup() {
   Serial.begin(9600);
-  randomSeed(analogRead(0));
+  randomSeed(analogRead(0)-analogRead(1)+analogRead(2)-analogRead(3)+analogRead(4));
   pinMode(SONAR_PIN,INPUT);
   pinMode(SPEAKER_PIN,OUTPUT);
   matrix.begin();
@@ -66,9 +66,13 @@ void setup() {
 }
 
 void loop() {
-  WipeOut(matrix.Color(0,255,0),100);  
-  WipeOut(0,100);
-  delay(1000);
+/*
+  for (int i=255;i>=0;i--) {
+      playTone(255-(i/2),1);   
+  }
+*/
+    Serial.println(analogRead(0)-analogRead(1)+analogRead(2)-analogRead(3)+analogRead(4));
+    delay(100);
   t.update();
 /*
   int lit_rows;   // how many rows of the view we'll light up  
@@ -111,7 +115,11 @@ void startShortRangeScan() {
   t.stop(scan_event);
   detect=false;
   matrix.fillScreen(0);
-  matrix.show();
+  for (int i=255;i>=50;i--) {
+    matrix.drawRect(0,0,w,h,matrix.Color(i,i,i));
+    matrix.show();
+    playTone(255-(i/2)-25,1); 
+  }
   current_state=SHORT_RANGE_SCAN;
   downgrade_transition_count=0; 
   upgrade_transition_count=0;
