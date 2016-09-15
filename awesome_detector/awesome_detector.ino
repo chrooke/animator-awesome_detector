@@ -1,6 +1,3 @@
-// Adafruit_NeoMatrix example for single NeoPixel Shield.
-// Scrolls 'Howdy' across the matrix in a portrait (vertical) orientation.
-
 //Comment out to make the program silent
 #define AUDIO
 
