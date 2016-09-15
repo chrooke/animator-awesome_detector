@@ -405,8 +405,7 @@ void Countdown() {
       for (int i=0;i<h;i+=2) {  
         playTone(75,150);
         delay(1000);
-        matrix.drawLine(0,i,w,i,0);
-        matrix.drawLine(0,i+1,w,i+1,0);
+        matrix.drawRect(0,i,w,2,0);
         matrix.show();
       }
 }
