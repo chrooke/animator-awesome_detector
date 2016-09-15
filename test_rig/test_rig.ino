@@ -71,7 +71,9 @@ void loop() {
       playTone(255-(i/2),1);   
   }
 */
-  Countdown();
+  WipeOut(matrix.Color(random(255),random(255),random(255)),100);
+  WipeOut(matrix.Color(random(255),random(255),random(255)),75);  
+  WipeOut(0,50);
   delay(1000);
   t.update();
 /*
@@ -315,7 +317,7 @@ void Countdown() {
       matrix.show();
       for (int i=0;i<h;i+=2) {  
         playTone(75,150);
-        delay(1000);
+        delay(850);
         matrix.drawRect(0,i,w,2,0);
         matrix.show();
       }
@@ -329,7 +331,7 @@ void WipeOut(uint16_t color,int drag) {
       for (int i=1;i<=h/2;i++) {
         matrix.fillRect((i<3)?((w/2)-1):(0),(h/2)-i,(i<3)?(2):(w),i*2,color);     
         matrix.show();
-        delay(drag);
+        playTone(175-(20*i),drag);
       }
 }
 
