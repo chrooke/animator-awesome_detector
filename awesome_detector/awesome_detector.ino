@@ -2,7 +2,7 @@
 #define AUDIO
 
 //Remove comment to get debug information to Serial
-#define DEBUG 
+//#define DEBUG 
 
 #include <Adafruit_GFX.h>
 #include <Adafruit_NeoMatrix.h>
@@ -241,6 +241,7 @@ void playTone(int tone, int duration) {
 }
 
 void moveWalker(uint16_t walker) {
+  int16_t cx,cy;
 #ifdef DEBUG
   Serial.print("++moveWalker pre: ");Serial.print(walker);Serial.print(" ");
   Serial.print(lrs_walkers[walker][0]);Serial.print(" ");  Serial.print(" ");Serial.print(lrs_walkers[walker][1]);Serial.print(" "); 
@@ -251,35 +252,53 @@ void moveWalker(uint16_t walker) {
 #endif
   switch(lrs_walkers[walker][2]) {
     case 0: //up, left
-            lrs_walkers[walker][1] -=1;
-            lrs_walkers[walker][0] -=1;
+            cy=lrs_walkers[walker][1]-1;
+            cx=lrs_walkers[walker][0]-1;
             break;
     case 1: //up
-            lrs_walkers[walker][1] -=1;
+            cy=lrs_walkers[walker][1]-1;
+            cx=lrs_walkers[walker][0];
             break;
     case 2: //up, right
-            lrs_walkers[walker][1] -=1;
-            lrs_walkers[walker][0] +=1;
+            cy=lrs_walkers[walker][1]-1;
+            cx=lrs_walkers[walker][0]+1;
             break;
     case 3: //right
-            lrs_walkers[walker][0] +=1;
+            cy=lrs_walkers[walker][1];
+            cx=lrs_walkers[walker][0]+1;
             break;
     case 4: //down, right
-            lrs_walkers[walker][1] +=1;
-            lrs_walkers[walker][0] +=1;
+            cy=lrs_walkers[walker][1]+1;
+            cx=lrs_walkers[walker][0]+1;
             break;
     case 5: //down
-            lrs_walkers[walker][1] +=1;
+            cy=lrs_walkers[walker][1]+1;
+            cx=lrs_walkers[walker][0];
             break;
     case 6: //down, left
-            lrs_walkers[walker][1] +=1;
-            lrs_walkers[walker][0] -=1;
+            cy=lrs_walkers[walker][1]+1;
+            cx=lrs_walkers[walker][0]-1;
             break;
     case 7: //left
-            lrs_walkers[walker][0] -=1;
+            cy=lrs_walkers[walker][1];
+            cx=lrs_walkers[walker][0]-1;
             break;           
   }
-  bounceOffWall(walker);
+  if (cx<0 || cx >= w || cy<0 || cy >= h) { //collision! Try a different direction.
+    lrs_walkers[walker][2]=random(8);
+#ifdef DEBUG
+  Serial.print("++moveWalker collision: ");Serial.print(walker);Serial.print(" ");
+  Serial.print(lrs_walkers[walker][0]);Serial.print(" ");  Serial.print(" ");Serial.print(lrs_walkers[walker][1]);Serial.print(" "); 
+  Serial.print(" ");Serial.print(lrs_walkers[walker][2]);Serial.print(" ");
+  Serial.print(" ");Serial.print(lrs_walkers[walker][3]);Serial.print(" ");
+  Serial.print(" ");Serial.print(lrs_walkers[walker][4]);Serial.print(" ");
+  Serial.print(" ");Serial.print(lrs_walkers[walker][5]);Serial.println(" ");
+#endif
+    moveWalker(walker);
+  } else { //OK
+    lrs_walkers[walker][0]=cx;
+    lrs_walkers[walker][1]=cy;
+  }
 #ifdef DEBUG
   Serial.print("++moveWalker post: ");Serial.print(walker);Serial.print(" ");
   Serial.print(lrs_walkers[walker][0]);Serial.print(" ");  Serial.print(" ");Serial.print(lrs_walkers[walker][1]);Serial.print(" "); 
@@ -288,32 +307,6 @@ void moveWalker(uint16_t walker) {
   Serial.print(" ");Serial.print(lrs_walkers[walker][4]);Serial.print(" ");
   Serial.print(" ");Serial.print(lrs_walkers[walker][5]);Serial.println(" ");
 #endif
-}
-
-void bounceOffWall(int walker) {
-  boolean collision=false;
-  if (lrs_walkers[walker][0]<0 || lrs_walkers[walker][0] >= w) {
-    lrs_walkers[walker][0]=max(0,lrs_walkers[walker][0]);
-    lrs_walkers[walker][0]=min(lrs_walkers[walker][0],w-1);
-    collision=true;  
-  }
-  if (lrs_walkers[walker][1]<0 || lrs_walkers[walker][1] >= h) {
-    lrs_walkers[walker][1]=max(0,lrs_walkers[walker][1]);
-    lrs_walkers[walker][1]=min(lrs_walkers[walker][1],h-1);
-    collision=true;
-  }
-  if (collision) {
-       lrs_walkers[walker][2]=random(8);
-#ifdef DEBUG
-  Serial.print("++++bounceOffWall collision: ");Serial.print(walker);Serial.print(" ");
-  Serial.print(lrs_walkers[walker][0]);Serial.print(" ");  Serial.print(" ");Serial.print(lrs_walkers[walker][1]);Serial.print(" "); 
-  Serial.print(" ");Serial.print(lrs_walkers[walker][2]);Serial.print(" ");
-  Serial.print(" ");Serial.print(lrs_walkers[walker][3]);Serial.print(" ");
-  Serial.print(" ");Serial.print(lrs_walkers[walker][4]);Serial.print(" ");
-  Serial.print(" ");Serial.print(lrs_walkers[walker][5]);Serial.println(" ");
-#endif
-       moveWalker(walker);    
-  }
 }
 
 void Countdown() {
