@@ -15,13 +15,15 @@
 #define MATRIX_PIN 6
 #define SPEAKER_PIN 10
 #define MAX_WALKERS 10
-#define NUM_STATES 3
+#define NUM_STATES 5
 #define TIME_PER_STATE 30000L
 
 enum State {
+  SINGLE_WALKER,
   WALKERS,
   FLASHY,
-  HIVE
+  SINGLE_HIVE,
+  HIVES
 };
 
 Adafruit_NeoMatrix matrix = Adafruit_NeoMatrix(4, 8, MATRIX_PIN,
@@ -38,7 +40,7 @@ uint8_t scan_event;
 uint16_t state_delay;
 //holds the "walkers" for the long range scanner.
 int16_t lrs_walkers[MAX_WALKERS][6];
-uint8_t num_walkers; 
+uint8_t num_walkers=0; 
 
 
 void setup() {
@@ -56,9 +58,10 @@ void setup() {
 void loop() {
   switch (current_state) {
     case WALKERS:
+    case SINGLE_WALKER:
         //move walkers
         matrix.fillScreen(0);
-        for (uint16_t i=0;i<=num_walkers;i++){
+        for (uint16_t i=0;i<num_walkers;i++){
           matrix.drawPixel(lrs_walkers[i][0],
                            lrs_walkers[i][1],
                            matrix.Color(
@@ -75,17 +78,20 @@ void loop() {
         matrix.show();
         break;
 
-    case HIVE:
+    case HIVES:
+    case SINGLE_HIVE:
         //move hive
         matrix.fillScreen(0);
-        matrix.drawPixel(lrs_walkers[0][0],
-                         lrs_walkers[0][1],
-                         matrix.Color(
-                         lrs_walkers[0][3],
-                         lrs_walkers[0][4],
-                         lrs_walkers[0][5]));
-        moveWalker(0);
-        lrs_walkers[0][2]=random(8);         
+        for (uint16_t i=0;i<num_walkers;i++){
+          matrix.drawPixel(lrs_walkers[i][0],
+                           lrs_walkers[i][1],
+                           matrix.Color(
+                           lrs_walkers[i][3],
+                           lrs_walkers[i][4],
+                           lrs_walkers[i][5]));
+          moveWalker(i);
+          lrs_walkers[i][2]=random(8);         
+        }
         matrix.show();
         break;
   }
@@ -94,47 +100,64 @@ void loop() {
   t.update();
 }
 
-void startWalkers() {
-#ifdef DEBUG
-  Serial.println("Switching to walkers...");
-#endif
-  current_state=WALKERS;
-  num_walkers=random(MAX_WALKERS);
-  state_delay=random(100,750);
-  for (uint16_t i; i<MAX_WALKERS;i++) {
-    lrs_walkers[i][0]=random(w);
-    lrs_walkers[i][1]=random(h);
-    lrs_walkers[i][2]=random(8);
-    lrs_walkers[i][3]=random(1,255);    
-    lrs_walkers[i][4]=random(1,255); 
-    lrs_walkers[i][5]=random(1,255);    
-  }  
+void changeState() {
   randomTransition();
-}
-
-void startFlashy() {
 #ifdef DEBUG
-  Serial.println("Switching to flashy...");
+      Serial.print("Switching to ");
 #endif
-  current_state=FLASHY;
-  state_delay=random(250);
-  randomTransition();
-}
-
-void startHive() {
+  switch (random(NUM_STATES)) {
+    case SINGLE_WALKER:
 #ifdef DEBUG
-  Serial.println("Switching to hive...");
+      Serial.println("SINGLE_WALKER...");
 #endif
-  current_state=HIVE;
-  num_walkers=1;
-  state_delay=20;
-  lrs_walkers[0][0]=random(w);
-  lrs_walkers[0][1]=random(h);
-  lrs_walkers[0][2]=random(8);
-  lrs_walkers[0][3]=random(1,255);    
-  lrs_walkers[0][4]=random(1,255); 
-  lrs_walkers[0][5]=random(1,255);    
-  randomTransition();
+      current_state=SINGLE_WALKER;
+      num_walkers=1; 
+      state_delay=random(50);
+      initializeWalkers();  
+      break;
+      
+    case WALKERS:
+#ifdef DEBUG
+      Serial.println("WALKERS...");
+#endif
+      current_state=WALKERS;
+      state_delay=random(100,750);
+      num_walkers=random(1,MAX_WALKERS);
+      initializeWalkers();
+      break;
+      
+    case FLASHY:
+#ifdef DEBUG
+  Serial.println("FLASHY...");
+#endif
+      current_state=FLASHY;
+      state_delay=random(250);
+      break;
+      
+    case SINGLE_HIVE:
+#ifdef DEBUG
+      Serial.println("SINGLE_HIVE...");
+#endif
+      current_state=SINGLE_HIVE;
+      num_walkers=1;
+      state_delay=20;
+      initializeWalkers();
+      break;
+          
+    case HIVES:
+#ifdef DEBUG
+      Serial.println("HIVES...");
+#endif
+      current_state=HIVES;
+      num_walkers=random(1,4);
+      state_delay=20;
+      initializeWalkers();
+      break;
+  }
+#ifdef DEBUG
+      Serial.print("   num_walkers: ");Serial.println(num_walkers);
+      Serial.print("   state_delay: ");Serial.println(state_delay);
+#endif
 }
 
 void playTone(int tone, int duration) {
@@ -146,17 +169,15 @@ void playTone(int tone, int duration) {
   }
 }
 
-void changeState() {
-  switch (random(NUM_STATES)) {
-    case WALKERS:
-      startWalkers();
-      break;
-    case FLASHY:
-      startFlashy();
-      break;
-    case HIVE:
-      startHive();
-  }
+void initializeWalkers() {
+  for (uint16_t i; i<num_walkers;i++) {
+    lrs_walkers[i][0]=random(w);
+    lrs_walkers[i][1]=random(h);
+    lrs_walkers[i][2]=random(8);
+    lrs_walkers[i][3]=random(1,255);    
+    lrs_walkers[i][4]=random(1,255); 
+    lrs_walkers[i][5]=random(1,255);    
+  }   
 }
 
 void moveWalker(uint16_t walker) {
@@ -205,37 +226,40 @@ void moveWalker(uint16_t walker) {
 }
 
 void randomTransition() {
+#ifdef DEBUG
+      Serial.print("Transition: ");
+#endif  
   switch(random(6)) {
     case 0:
 #ifdef DEBUG
-      Serial.println("Transistion: Countdown");
+      Serial.println("Countdown");
 #endif
       Countdown();
       break;
     case 1:
 #ifdef DEBUG
-      Serial.println("Transistion: Red Wipeout");
+      Serial.println("Red Wipeout");
 #endif
       WipeOut(matrix.Color(255,0,0),100);  
       WipeOut(0,100);
       break;
     case 2:
 #ifdef DEBUG
-      Serial.println("Transistion: Green Wipeout");
+      Serial.println("Green Wipeout");
 #endif
       WipeOut(matrix.Color(0,255,0),100);  
       WipeOut(0,100);
       break;
     case 3:
 #ifdef DEBUG
-      Serial.println("Transistion: Blue Wipeout");
+      Serial.println("Blue Wipeout");
 #endif
       WipeOut(matrix.Color(0,0,255),100);  
       WipeOut(0,100);
       break;
     case 4:
 #ifdef DEBUG
-      Serial.println("Transistion: Random Double Wipeout");
+      Serial.println("Random Double Wipeout");
 #endif
       WipeOut(matrix.Color(random(255),random(255),random(255)),100);
       WipeOut(matrix.Color(random(255),random(255),random(255)),75);  
@@ -243,7 +267,7 @@ void randomTransition() {
       break;
     case 5:
 #ifdef DEBUG
-      Serial.println("Transistion: Framer");
+      Serial.println("Framer");
 #endif
       Framer();
       break;     
