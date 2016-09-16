@@ -128,6 +128,11 @@ void loop() {
               upgrade_transition_count++;
             }
             if (range>12) {
+#ifdef DEBUG
+              Serial.print("Range: ");Serial.println(range);
+              Serial.print("downgrade_transition_count: ");Serial.println(downgrade_transition_count);
+              Serial.print("upgrade_transition_count: ");Serial.println(upgrade_transition_count);
+#endif
             }
             detect=false;
          }
