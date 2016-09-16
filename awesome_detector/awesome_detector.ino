@@ -231,12 +231,6 @@ void getRange() {
     detect=true;
 }
 
-void lightRow(int row) {
-  for (int i=0; i<w; ++i) {
-    matrix.drawPixel(i,row,matrix.Color(255, 0, 0));   
-  }
-}
-
 void playTone(int tone, int duration) {
   for (long i = 0; i < duration * 1000L; i += tone * 2) {
     digitalWrite(SPEAKER_PIN, HIGH);
