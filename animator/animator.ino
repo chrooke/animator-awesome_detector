@@ -1,5 +1,5 @@
 //Comment out to make the program silent
-//#define AUDIO
+#define AUDIO
 
 //Remove comment to get debug information to Serial
 //#define DEBUG 
