@@ -1,5 +1,5 @@
 //Comment out to make the program silent
-#define AUDIO
+//#define AUDIO
 
 //Remove comment to get debug information to Serial
 //#define DEBUG 
@@ -15,7 +15,7 @@
 #define MATRIX_PIN 6
 #define SPEAKER_PIN 10
 #define MAX_WALKERS 10
-#define NUM_STATES 6
+#define NUM_STATES 7
 #define TIME_PER_STATE 30000L
 
 enum State {
@@ -24,7 +24,8 @@ enum State {
   FLASHY,
   SINGLE_HIVE,
   HIVES,
-  CIRCLES
+  CIRCLES,
+  LINES
 };
 
 Adafruit_NeoMatrix matrix = Adafruit_NeoMatrix(4, 8, MATRIX_PIN,
@@ -100,12 +101,21 @@ void loop() {
         break;
 
     case CIRCLES:
-      x = random(w);
-      y = random(h);
-      r = random(1,w);
-      matrix.drawCircle(x,y,r,matrix.Color(random(255), random(255), random(255)));
-      matrix.show();
-      matrix.drawCircle(x,y,r,0);
+        x = random(w);
+        y = random(h);
+        r = random(1,w);
+        matrix.drawCircle(x,y,r,matrix.Color(random(255), random(255), random(255)));
+        matrix.show();
+        matrix.drawCircle(x,y,r,0);
+        break;
+
+    case LINES:
+        x = random(w);
+        y = random(w);
+        matrix.drawLine(x,0,y,h,matrix.Color(random(255), random(255), random(255)));
+        matrix.show();
+        matrix.drawLine(x,0,y,h,0);
+        break;
   }
 
   delay(state_delay);
@@ -165,11 +175,6 @@ void changeState() {
       state_delay=20;
       initializeWalkers();
       break;
-      
-#ifdef DEBUG
-      Serial.print("   num_walkers: ");Serial.println(num_walkers);
-      Serial.print("   state_delay: ");Serial.println(state_delay);
-#endif
 
     case CIRCLES:
 #ifdef DEBUG
@@ -177,6 +182,19 @@ void changeState() {
 #endif
       current_state=CIRCLES;
       state_delay=random(1,11)*10;
+      break;
+
+#ifdef DEBUG
+      Serial.print("   num_walkers: ");Serial.println(num_walkers);
+      Serial.print("   state_delay: ");Serial.println(state_delay);
+#endif
+
+    case LINES:
+#ifdef DEBUG
+      Serial.println("LINES...");
+#endif
+      current_state=LINES;
+      state_delay=random(50,150);
       break;
   }
 #ifdef DEBUG

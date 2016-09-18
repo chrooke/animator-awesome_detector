@@ -72,13 +72,12 @@ void loop() {
   }
 */
 
-  int x = random(w);
-  int y = random(h);
-  int r = random(1,w);
+  int x1 = random(w);
+  int x2 = random(w);
   
-  matrix.drawCircle(x,y,r,matrix.Color(random(255), random(255), random(255)));
+  matrix.drawLine(x1,0,x2,h,matrix.Color(random(255), random(255), random(255)));
   matrix.show();
-  matrix.drawCircle(x,y,r,0);
+  matrix.drawLine(x1,0,x2,h,0);
   delay(200);
 
   t.update();
