@@ -1,5 +1,5 @@
 //Comment out to make the program silent
-//#define AUDIO
+#define AUDIO
 
 //Remove comment to get debug information to Serial
 //#define DEBUG 
@@ -15,7 +15,7 @@
 #define MATRIX_PIN 6
 #define SPEAKER_PIN 10
 #define MAX_WALKERS 10
-#define NUM_STATES 5
+#define NUM_STATES 6
 #define TIME_PER_STATE 30000L
 
 enum State {
@@ -23,11 +23,12 @@ enum State {
   WALKERS,
   FLASHY,
   SINGLE_HIVE,
-  HIVES
+  HIVES,
+  CIRCLES
 };
 
 Adafruit_NeoMatrix matrix = Adafruit_NeoMatrix(4, 8, MATRIX_PIN,
-  NEO_MATRIX_BOTTOM     + NEO_MATRIX_LEFT +
+  NEO_MATRIX_BOTTOM  + NEO_MATRIX_LEFT +
   NEO_MATRIX_COLUMNS + NEO_MATRIX_PROGRESSIVE,
   NEO_GRB            + NEO_KHZ800);
 
@@ -41,6 +42,9 @@ uint16_t state_delay;
 //holds the "walkers" for the long range scanner.
 int16_t lrs_walkers[MAX_WALKERS][6];
 uint8_t num_walkers=0; 
+uint8_t x;
+uint8_t y;
+uint8_t r;
 
 
 void setup() {
@@ -82,7 +86,7 @@ void loop() {
     case SINGLE_HIVE:
         //move hive
         matrix.fillScreen(0);
-        for (uint16_t i=0;i<num_walkers;i++){
+        for (uint16_t i=0;i<num_walkers;i++) {
           matrix.drawPixel(lrs_walkers[i][0],
                            lrs_walkers[i][1],
                            matrix.Color(
@@ -94,6 +98,14 @@ void loop() {
         }
         matrix.show();
         break;
+
+    case CIRCLES:
+      x = random(w);
+      y = random(h);
+      r = random(1,w);
+      matrix.drawCircle(x,y,r,matrix.Color(random(255), random(255), random(255)));
+      matrix.show();
+      matrix.drawCircle(x,y,r,0);
   }
 
   delay(state_delay);
@@ -152,6 +164,19 @@ void changeState() {
       num_walkers=random(1,4);
       state_delay=20;
       initializeWalkers();
+      break;
+      
+#ifdef DEBUG
+      Serial.print("   num_walkers: ");Serial.println(num_walkers);
+      Serial.print("   state_delay: ");Serial.println(state_delay);
+#endif
+
+    case CIRCLES:
+#ifdef DEBUG
+      Serial.println("CIRCLES...");
+#endif
+      current_state=CIRCLES;
+      state_delay=random(1,11)*10;
       break;
   }
 #ifdef DEBUG
@@ -229,35 +254,60 @@ void randomTransition() {
 #ifdef DEBUG
       Serial.print("Transition: ");
 #endif  
-  switch(random(6)) {
+  switch(random(10)) {
     case 0:
 #ifdef DEBUG
-      Serial.println("Countdown");
+      Serial.println("Red Countdown");
 #endif
-      Countdown();
+      Countdown(matrix.Color(255,0,0));
       break;
     case 1:
+#ifdef DEBUG
+      Serial.println("Green Countdown");
+#endif
+      Countdown(matrix.Color(0,255,0));
+      break;
+    case 2:
+#ifdef DEBUG
+      Serial.println("Blue Countdown");
+#endif
+      Countdown(matrix.Color(0,0,255));
+      break;
+    case 3:
+#ifdef DEBUG
+      Serial.println("Random Countdown");
+#endif
+      Countdown(matrix.Color(random(255),random(255),random(255)));
+      break;
+    case 4:
 #ifdef DEBUG
       Serial.println("Red Wipeout");
 #endif
       WipeOut(matrix.Color(255,0,0),100);  
       WipeOut(0,100);
       break;
-    case 2:
+    case 5:
 #ifdef DEBUG
       Serial.println("Green Wipeout");
 #endif
       WipeOut(matrix.Color(0,255,0),100);  
       WipeOut(0,100);
       break;
-    case 3:
+    case 6:
 #ifdef DEBUG
       Serial.println("Blue Wipeout");
 #endif
       WipeOut(matrix.Color(0,0,255),100);  
       WipeOut(0,100);
       break;
-    case 4:
+    case 7:
+#ifdef DEBUG
+      Serial.println("Random Wipeout");
+#endif
+      WipeOut(matrix.Color(random(255),random(255),random(255)),100);  
+      WipeOut(0,100);
+      break;
+    case 8:
 #ifdef DEBUG
       Serial.println("Random Double Wipeout");
 #endif
@@ -265,7 +315,7 @@ void randomTransition() {
       WipeOut(matrix.Color(random(255),random(255),random(255)),75);  
       WipeOut(0,50); 
       break;
-    case 5:
+    case 9:
 #ifdef DEBUG
       Serial.println("Framer");
 #endif
@@ -274,8 +324,8 @@ void randomTransition() {
   }
 }
 
-void Countdown() {
-      matrix.fillScreen(matrix.Color(255,0,0));
+void Countdown(uint16_t color) {
+      matrix.fillScreen(color);
       matrix.show();
       for (int i=0;i<h;i+=2) {  
   #ifdef AUDIO

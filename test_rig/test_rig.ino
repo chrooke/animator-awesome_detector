@@ -71,10 +71,16 @@ void loop() {
       playTone(255-(i/2),1);   
   }
 */
-  WipeOut(matrix.Color(random(255),random(255),random(255)),100);
-  WipeOut(matrix.Color(random(255),random(255),random(255)),75);  
-  WipeOut(0,50);
-  delay(1000);
+
+  int x = random(w);
+  int y = random(h);
+  int r = random(1,w);
+  
+  matrix.drawCircle(x,y,r,matrix.Color(random(255), random(255), random(255)));
+  matrix.show();
+  matrix.drawCircle(x,y,r,0);
+  delay(200);
+
   t.update();
 /*
   int lit_rows;   // how many rows of the view we'll light up  
