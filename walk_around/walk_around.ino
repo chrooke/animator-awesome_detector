@@ -43,21 +43,99 @@ Adafruit_NeoMatrix matrix = Adafruit_NeoMatrix(4, 8, PIN,
 const uint16_t colors[] = {
   matrix.Color(255, 0, 0), matrix.Color(0, 255, 0), matrix.Color(0, 0, 255) };
 
+
+int w    = matrix.width();
+int h    = matrix.height();
+int rx   = random(w);
+int ry   = random(h);
+int rr,rg,rb;
+int direction = random(8);
+#define DELAY 75
+
+void correctForWall(int *dest, int bound) {
+  Serial.print(rx);Serial.print(" ");
+  Serial.print(ry);Serial.print(" ");
+  Serial.print(w);Serial.print(" ");
+  Serial.print(h);Serial.print(" ");
+  Serial.print(*dest);Serial.print(" ");
+  Serial.println(bound);Serial.print(" ");
+  if (*dest<0 || *dest >= bound) {
+       *dest=max(0,*dest);
+       *dest=min(*dest,bound-1);
+       direction=random(8);
+       movePixel(direction);
+  }
+}
+
+void moveUp() {
+  ry -=1;
+  correctForWall(&ry,h);
+}
+
+void moveDown() {
+  ry +=1;
+  correctForWall(&ry,h);  
+}
+
+void moveLeft() {
+  rx -=1;
+  correctForWall(&rx,w);  
+}
+
+void moveRight() {
+  rx +=1;
+  correctForWall(&rx,w);  
+}
+
+void movePixel(int direction) {
+  switch(direction) {
+    case 0: //up, left
+            moveUp();
+            moveLeft();
+            break;
+    case 1: //up
+            moveUp();
+            break;
+    case 2: //up, right
+            moveUp();
+            moveRight();
+            break;
+    case 3: //right
+            moveRight();
+            break;
+    case 4: //down, right
+            moveDown();
+            moveRight();
+            break;
+    case 5: //down
+            moveDown();
+            break;
+    case 6: //down, left
+            moveDown();
+            moveLeft();
+            break;
+    case 7: //left
+            moveLeft();
+            break;           
+  }
+}
 void setup() {
+  Serial.begin(9600);
   matrix.begin();
   matrix.setBrightness(10);
 }
 
-int w    = matrix.width();
-int h    = matrix.height();
-int rx,ry,rr,rg,rb;
 
 void loop() {
-  rx = random(w);
-  ry = random(h);
-  rr = random(255);
-  rg = random(255);
-  rb = random(255);
+  rr = random(128,255);
+  rg = random(128,255);
+  rb = random(128,255);
+  
   matrix.drawPixel(rx,ry,matrix.Color(rr, rg, rb));
   matrix.show();
+  delay(DELAY);
+  matrix.drawPixel(rx,ry,0);
+  matrix.show();
+  movePixel(direction);
+  
 }
